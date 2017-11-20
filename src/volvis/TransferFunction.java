@@ -61,7 +61,9 @@ public class TransferFunction {
     }
 
     public TFColor getColor(int value) {
+        //buildLUT();
         return LUT[computeLUTindex(value)];
+        //return LUT[value];
     }
 
     

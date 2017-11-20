@@ -29,6 +29,24 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     TransferFunction tFunc;
     TransferFunctionEditor tfEditor;
     TransferFunction2DEditor tfEditor2D;
+
+    private void mip(double[] viewMatrix) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    private void compositing(double[] viewMatrix) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+    
+    public enum RaycastRenderType {
+        SLICER, MIP, COMPOSITING
+    }
+    
+    private RaycastRenderType type = RaycastRenderType.SLICER;
+    
+    public void setRenderType(RaycastRenderType type) {
+        this.type = type;
+    }
     
     public RaycastRenderer() {
         panel = new RaycastRendererPanel(this);
@@ -55,7 +73,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         tFunc = new TransferFunction(volume.getMinimum(), volume.getMaximum());
         
         // uncomment this to initialize the TF with good starting values for the orange dataset 
-        //tFunc.setTestFunc();
+        tFunc.setTestFunc();
         
         
         tFunc.addTFChangeListener(this);
@@ -142,7 +160,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 voxelColor.b = voxelColor.r;
                 voxelColor.a = val > 0 ? 1.0 : 0.0;  // this makes intensity 0 completely transparent and the rest opaque
                 // Alternatively, apply the transfer function to obtain a color
-                // voxelColor = tFunc.getColor(val);
+                //voxelColor = tFunc.getColor(val);
                 
                 
                 // BufferedImage expects a pixel color packed as ARGB in an int
@@ -230,7 +248,18 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         gl.glGetDoublev(GL2.GL_MODELVIEW_MATRIX, viewMatrix, 0);
 
         long startTime = System.currentTimeMillis();
-        slicer(viewMatrix);    
+        
+        switch(type) {
+            case SLICER:
+                slicer(viewMatrix); 
+                break;
+            case MIP:
+                mip(viewMatrix);
+                break;
+            case COMPOSITING:
+                compositing(viewMatrix);
+                break;
+        }
         
         long endTime = System.currentTimeMillis();
         double runningTime = (endTime - startTime);
