@@ -136,7 +136,7 @@ public class RaycastRendererPanel extends javax.swing.JPanel {
         try {            
             renderer.setRenderType(RaycastRenderer.RaycastRenderType.MIP);
             renderer.changed();
-        } catch (Exception ex) {
+        } catch (UnsupportedOperationException ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage());
         }
     }//GEN-LAST:event_mipButtonActionPerformed
@@ -145,7 +145,7 @@ public class RaycastRendererPanel extends javax.swing.JPanel {
         try {            
             renderer.setRenderType(RaycastRenderer.RaycastRenderType.SLICER);
             renderer.changed();
-        } catch (Exception ex) {
+        } catch (UnsupportedOperationException ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage());
         }
     }//GEN-LAST:event_slicerButtonActionPerformed
