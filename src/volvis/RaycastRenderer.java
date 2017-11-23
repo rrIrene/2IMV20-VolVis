@@ -12,6 +12,7 @@ import gui.RaycastRendererPanel;
 import gui.TransferFunction2DEditor;
 import gui.TransferFunctionEditor;
 import java.awt.image.BufferedImage;
+import static java.lang.Math.sqrt;
 import java.util.Arrays;
 import util.TFChangeListener;
 import util.VectorMath;
@@ -47,8 +48,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         VectorMath.setVector(viewVec, viewMatrix[2], viewMatrix[6], viewMatrix[10]);
         VectorMath.setVector(uVec, viewMatrix[0], viewMatrix[4], viewMatrix[8]);
         VectorMath.setVector(vVec, viewMatrix[1], viewMatrix[5], viewMatrix[9]);
-        
-        System.out.println("viewVec: " + Arrays.toString(viewVec));
 
         // image is square
         int imageCenter = image.getWidth() / 2;
@@ -56,33 +55,46 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         double[] pixelCoord = new double[3];
         double[] volumeCenter = new double[3];
         VectorMath.setVector(volumeCenter, volume.getDimX() / 2, volume.getDimY() / 2, volume.getDimZ() / 2);
-
-        // sample on a plane through the origin of the volume data
-        double max = volume.getMaximum();
-        TFColor voxelColor = new TFColor();
         
+        //maxVoxels stores the maximum value for each voxels in the image.
         int[][] maxVoxels = new int[image.getHeight()][image.getWidth()];
         
         for (int j = 0; j < image.getHeight(); j++) {
-            for (int i = 0; i < image.getWidth(); i++) {
+            for (int i = 0; i < image.getWidth(); i++) {                
                 pixelCoord[0] = uVec[0] * (i - imageCenter) + vVec[0] * (j - imageCenter)
                         + volumeCenter[0];
                 pixelCoord[1] = uVec[1] * (i - imageCenter) + vVec[1] * (j - imageCenter)
                         + volumeCenter[1];
-                double zCoord = uVec[2] * (i - imageCenter) + vVec[2] * (j - imageCenter)
+                pixelCoord[2] = uVec[2] * (i - imageCenter) + vVec[2] * (j - imageCenter)
                         + volumeCenter[2];
                 
                 maxVoxels[i][j] = 0;
                 
-                //TODO: Find the right maxVoxel based on viewVec; do translation on the new viewVec
-                for (double z = volumeCenter[2] - 1; z > 0; z--) {
-                    pixelCoord[2] = zCoord + z;
+                //pixelCoord form a vector from viewing screen to middle of volume data.
+                //here we find the length of this vector.
+                double length = VectorMath.length(pixelCoord);
+                //x, y, z form a unit vector, translated to viewVec.
+                //we need this to find the maximum voxel.
+                double x = viewVec[0]*pixelCoord[0]/length;
+                double y = viewVec[1]*pixelCoord[1]/length;
+                double z = viewVec[2]*pixelCoord[2]/length;
+                
+                //iterate through pixelCoord by following the unit vector towards the viewing plane in order to find the maximum voxel.
+                //TODO: Find a proper way to start and stop iterating
+                //while (pixelCoord[0] != x && pixelCoord[1] != y && pixelCoord[2] != z) {
+                for (int step = 0; step <= volume.getDimZ(); step++) {
                     int val = getVoxel(pixelCoord);
                     if (maxVoxels[i][j] < val)  maxVoxels[i][j] = val;
+                    pixelCoord[0] -= x;
+                    pixelCoord[1] -= y;
+                    pixelCoord[2] -= z;
                 }
             }
         }
-
+        
+        // sample on a plane through the origin of the volume data
+        double max = volume.getMaximum();
+        TFColor voxelColor = new TFColor();
         
         for (int j = 0; j < image.getHeight(); j++) {
             for (int i = 0; i < image.getWidth(); i++) {
@@ -95,8 +107,9 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 voxelColor.b = voxelColor.r;
                 voxelColor.a = val > 0 ? 1.0 : 0.0;  // this makes intensity 0 completely transparent and the rest opaque
                 // Alternatively, apply the transfer function to obtain a color
-                //voxelColor = tFunc.getColor(val);
-                
+                // but only do this if we're compositing.
+                if (type == RaycastRenderType.COMPOSITING)
+                    voxelColor = tFunc.getColor(val);
                 
                 // BufferedImage expects a pixel color packed as ARGB in an int
                 int c_alpha = voxelColor.a <= 1.0 ? (int) Math.floor(voxelColor.a * 255) : 255;
@@ -110,7 +123,8 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     }
 
     private void compositing(double[] viewMatrix) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        //Basically compositing is just MIP that uses transfer function for coloring.
+        mip(viewMatrix);
     }
     
     public enum RaycastRenderType {
