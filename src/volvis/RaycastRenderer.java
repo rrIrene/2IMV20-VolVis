@@ -117,7 +117,8 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         }
     }
     private void compositing(double[] viewMatrix) {
-        throw new UnsupportedOperationException("Not yet implemented.");
+        //Basically compositing is just MIP that uses transfer function for coloring.
+         mip(viewMatrix);    
     }
     
     public enum RaycastRenderType {
