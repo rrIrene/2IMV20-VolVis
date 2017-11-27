@@ -53,63 +53,58 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         int imageCenter = image.getWidth() / 2;
 
         double[] pixelCoord = new double[3];
+        double[] centerCoord = new double[3];
         double[] volumeCenter = new double[3];
         VectorMath.setVector(volumeCenter, volume.getDimX() / 2, volume.getDimY() / 2, volume.getDimZ() / 2);
-        
-        //maxVoxels stores the maximum value for each voxels in the image.
-        int[][] maxVoxels = new int[image.getHeight()][image.getWidth()];
-        
-        for (int j = 0; j < image.getHeight(); j++) {
-            for (int i = 0; i < image.getWidth(); i++) {                
-                pixelCoord[0] = uVec[0] * (i - imageCenter) + vVec[0] * (j - imageCenter)
-                        + volumeCenter[0];
-                pixelCoord[1] = uVec[1] * (i - imageCenter) + vVec[1] * (j - imageCenter)
-                        + volumeCenter[1];
-                pixelCoord[2] = uVec[2] * (i - imageCenter) + vVec[2] * (j - imageCenter)
-                        + volumeCenter[2];
-                
-                maxVoxels[i][j] = 0;
-                
-                //pixelCoord form a vector from viewing screen to middle of volume data.
-                //here we find the length of this vector.
-                double length = VectorMath.length(pixelCoord);
-                //x, y, z form a unit vector, translated to viewVec.
-                //we need this to find the maximum voxel.
-                double x = viewVec[0]*pixelCoord[0]/length;
-                double y = viewVec[1]*pixelCoord[1]/length;
-                double z = viewVec[2]*pixelCoord[2]/length;
-                
-                //iterate through pixelCoord by following the unit vector towards the viewing plane in order to find the maximum voxel.
-                //TODO: Find a proper way to start and stop iterating
-                //while (pixelCoord[0] != x && pixelCoord[1] != y && pixelCoord[2] != z) {
-                for (int step = 0; step <= volume.getDimZ(); step++) {
-                    int val = getVoxel(pixelCoord);
-                    if (maxVoxels[i][j] < val)  maxVoxels[i][j] = val;
-                    pixelCoord[0] -= x;
-                    pixelCoord[1] -= y;
-                    pixelCoord[2] -= z;
-                }
-            }
-        }
         
         // sample on a plane through the origin of the volume data
         double max = volume.getMaximum();
         TFColor voxelColor = new TFColor();
         
         for (int j = 0; j < image.getHeight(); j++) {
-            for (int i = 0; i < image.getWidth(); i++) {
+            for (int i = 0; i < image.getWidth(); i++) {          
+                centerCoord[0] = uVec[0] * (i - imageCenter) + vVec[0] * (j - imageCenter)
+                        + volumeCenter[0];
+                centerCoord[1] = uVec[1] * (i - imageCenter) + vVec[1] * (j - imageCenter)
+                        + volumeCenter[1];
+                centerCoord[2] = uVec[2] * (i - imageCenter) + vVec[2] * (j - imageCenter)
+                        + volumeCenter[2];
                 
-                int val = maxVoxels[i][j];
+                int maxVoxel = 0;
+                
+                //centerCoord forms a vector from viewing screen to middle of volume data.
+                //here we find the length of this vector.
+                double length = VectorMath.length(centerCoord);
+                //x, y, z form a unit vector, translated to viewVec.
+                //we need this to find the maximum voxel.
+                double x = viewVec[0]*centerCoord[0]/length;
+                double y = viewVec[1]*centerCoord[1]/length;
+                double z = viewVec[2]*centerCoord[2]/length;
+                
+                //Get the coordinate in the ray the furthest away within the boundary, and set this to pixelCoord.
+                VectorMath.setVector(pixelCoord, centerCoord[0] + (x * volumeCenter[2]) - 0.1, centerCoord[1] + (y * volumeCenter[2]) - 0.1, centerCoord[2] + (z * volumeCenter[2]) - 0.1);
+                
+                //iterate through the ray by following the unit vector towards the viewing plane in order to find the maximum voxel.
+                //2*volume.getDimZ() is used because the volume data spans the positive and negative z-axis.
+                for (int step = 0; step <= 2*volume.getDimZ(); step++) {
+                    try {
+                       int val = getVoxel(pixelCoord);
+                       if (maxVoxel < val)  maxVoxel = val;
+                       pixelCoord[0] -= x;
+                       pixelCoord[1] -= y;
+                       pixelCoord[2] -= z;                        
+                    } catch (Exception ex) {
+                        System.out.println("Exception at: " + Arrays.toString(pixelCoord));
+                    }
+                }
                 
                 // Map the intensity to a grey value by linear scaling
-                voxelColor.r = val/max;
+                voxelColor.r = maxVoxel/max;
                 voxelColor.g = voxelColor.r;
                 voxelColor.b = voxelColor.r;
-                voxelColor.a = val > 0 ? 1.0 : 0.0;  // this makes intensity 0 completely transparent and the rest opaque
+                voxelColor.a = maxVoxel > 0 ? 1.0 : 0.0;  // this makes intensity 0 completely transparent and the rest opaque
                 // Alternatively, apply the transfer function to obtain a color
-                // but only do this if we're compositing.
-                if (type == RaycastRenderType.COMPOSITING)
-                    voxelColor = tFunc.getColor(val);
+                //voxelColor = tFunc.getColor(maxVoxel);
                 
                 // BufferedImage expects a pixel color packed as ARGB in an int
                 int c_alpha = voxelColor.a <= 1.0 ? (int) Math.floor(voxelColor.a * 255) : 255;
@@ -123,8 +118,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     }
 
     private void compositing(double[] viewMatrix) {
-        //Basically compositing is just MIP that uses transfer function for coloring.
-        mip(viewMatrix);
+        throw new UnsupportedOperationException("Not yet implemented.");
     }
     
     public enum RaycastRenderType {
