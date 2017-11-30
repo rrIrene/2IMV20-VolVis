@@ -4,6 +4,8 @@
  */
 package gui;
 
+import java.awt.event.KeyEvent;
+import static java.lang.Integer.parseInt;
 import javax.swing.JOptionPane;
 import volvis.RaycastRenderer;
 
@@ -47,6 +49,8 @@ public class RaycastRendererPanel extends javax.swing.JPanel {
         compositingButton = new javax.swing.JRadioButton();
         tf2dButton = new javax.swing.JRadioButton();
         shadingCheckbox = new javax.swing.JCheckBox();
+        stepLabel = new javax.swing.JLabel();
+        stepTextbox = new javax.swing.JTextField();
 
         jLabel1.setText("Rendering time (ms):");
 
@@ -92,6 +96,17 @@ public class RaycastRendererPanel extends javax.swing.JPanel {
             }
         });
 
+        stepLabel.setLabelFor(stepTextbox);
+        stepLabel.setText("steps");
+        stepLabel.setName("stepLabel"); // NOI18N
+
+        stepTextbox.setText("50");
+        stepTextbox.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyReleased(java.awt.event.KeyEvent evt) {
+                stepTextboxKeyReleased(evt);
+            }
+        });
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
         layout.setHorizontalGroup(
@@ -102,14 +117,20 @@ public class RaycastRendererPanel extends javax.swing.JPanel {
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(jLabel1)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(renderingSpeedLabel))
-                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addComponent(compositingButton)
-                        .addComponent(tf2dButton)
-                        .addComponent(mipButton)
-                        .addComponent(slicerButton)
-                        .addComponent(shadingCheckbox)))
-                .addContainerGap(339, Short.MAX_VALUE))
+                        .addComponent(renderingSpeedLabel)
+                        .addGap(45, 45, 45))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(compositingButton)
+                            .addComponent(tf2dButton)
+                            .addComponent(mipButton)
+                            .addComponent(slicerButton)
+                            .addComponent(shadingCheckbox))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(stepTextbox, javax.swing.GroupLayout.PREFERRED_SIZE, 48, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(3, 3, 3)))
+                .addComponent(stepLabel)
+                .addContainerGap(285, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -123,17 +144,25 @@ public class RaycastRendererPanel extends javax.swing.JPanel {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(mipButton)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(compositingButton)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(compositingButton)
+                    .addComponent(stepLabel)
+                    .addComponent(stepTextbox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(tf2dButton)
                 .addGap(18, 18, 18)
                 .addComponent(shadingCheckbox)
-                .addContainerGap(137, Short.MAX_VALUE))
+                .addContainerGap(134, Short.MAX_VALUE))
         );
+
+        stepLabel.setVisible(false);
+        stepTextbox.setVisible(false);
     }// </editor-fold>//GEN-END:initComponents
 
     private void mipButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mipButtonActionPerformed
-        try {            
+        try {                 
+            stepTextbox.setVisible(false);
+            stepLabel.setVisible(false);
             renderer.setRenderType(RaycastRenderer.RaycastRenderType.MIP);
             renderer.changed();
         } catch (UnsupportedOperationException ex) {
@@ -142,7 +171,9 @@ public class RaycastRendererPanel extends javax.swing.JPanel {
     }//GEN-LAST:event_mipButtonActionPerformed
 
     private void slicerButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_slicerButtonActionPerformed
-        try {            
+        try {                 
+            stepTextbox.setVisible(false);
+            stepLabel.setVisible(false);
             renderer.setRenderType(RaycastRenderer.RaycastRenderType.SLICER);
             renderer.changed();
         } catch (UnsupportedOperationException ex) {
@@ -152,9 +183,12 @@ public class RaycastRendererPanel extends javax.swing.JPanel {
 
     private void compositingButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_compositingButtonActionPerformed
         try {            
+            stepTextbox.setVisible(true);
+            stepLabel.setVisible(true);
+            renderer.setCompositingStep(parseInt(stepTextbox.getText()));
             renderer.setRenderType(RaycastRenderer.RaycastRenderType.COMPOSITING);
             renderer.changed();
-        } catch (Exception ex) {
+        } catch (UnsupportedOperationException ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage());
         }
     }//GEN-LAST:event_compositingButtonActionPerformed
@@ -167,6 +201,14 @@ public class RaycastRendererPanel extends javax.swing.JPanel {
         JOptionPane.showMessageDialog(this, "Not implemented.");
     }//GEN-LAST:event_shadingCheckboxActionPerformed
 
+    private void stepTextboxKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_stepTextboxKeyReleased
+        if (evt.getKeyCode()==KeyEvent.VK_ENTER){
+            renderer.setCompositingStep(parseInt(stepTextbox.getText()));
+            renderer.setRenderType(RaycastRenderer.RaycastRenderType.COMPOSITING);
+            renderer.changed();
+        }
+    }//GEN-LAST:event_stepTextboxKeyReleased
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.ButtonGroup buttonGroup1;
     private javax.swing.JRadioButton compositingButton;
@@ -175,6 +217,8 @@ public class RaycastRendererPanel extends javax.swing.JPanel {
     private javax.swing.JLabel renderingSpeedLabel;
     private javax.swing.JCheckBox shadingCheckbox;
     private javax.swing.JRadioButton slicerButton;
+    private javax.swing.JLabel stepLabel;
+    private javax.swing.JTextField stepTextbox;
     private javax.swing.JRadioButton tf2dButton;
     // End of variables declaration//GEN-END:variables
 }

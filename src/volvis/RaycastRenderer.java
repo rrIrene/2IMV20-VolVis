@@ -53,7 +53,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         int imageCenter = image.getWidth() / 2;
 
         double[] pixelCoord = new double[3];
-        double[] centerCoord = new double[3];
         double[] volumeCenter = new double[3];
         VectorMath.setVector(volumeCenter, volume.getDimX() / 2, volume.getDimY() / 2, volume.getDimZ() / 2);
         
@@ -128,7 +127,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         int imageCenter = image.getWidth() / 2;
 
         double[] pixelCoord = new double[3];
-        double[] centerCoord = new double[3];
         double[] volumeCenter = new double[3];
         VectorMath.setVector(volumeCenter, volume.getDimX() / 2, volume.getDimY() / 2, volume.getDimZ() / 2);
         double diagonal = VectorMath.length(new double[]{volume.getDimX(),volume.getDimY(),volume.getDimZ()});
@@ -136,6 +134,10 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         // sample on a plane through the origin of the volume data
         double max = volume.getMaximum();
         TFColor voxelColor = new TFColor();
+        double[] stepVector = new double[3];
+        if (diagonal < compositingStep) compositingStep = (int)diagonal;
+        double stepLength = diagonal / compositingStep;
+        VectorMath.setVector(stepVector, viewVec[0] * stepLength, viewVec[1] * stepLength, viewVec[2] * stepLength);
         
         for (int j = 0; j < image.getHeight(); j++) {
             for (int i = 0; i < image.getWidth(); i++) {          
@@ -145,33 +147,31 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                         + volumeCenter[1] + viewVec[1] * (volumeCenter[1] - 0.1);
                 pixelCoord[2] = uVec[2] * (i - imageCenter) + vVec[2] * (j - imageCenter)
                         + volumeCenter[2] + viewVec[2] * (volumeCenter[2] - 0.1);
-                              
-                //double intensity = Interpolate(uVec, vVec, pixelCoord, max, volumeCenter);
-                //int val = (int) intensity;  
-                int val = getVoxel(pixelCoord);
+                   
+                double intensity = Interpolate(uVec, vVec, pixelCoord, max, volumeCenter);
+                int val = (int) intensity;  
+                //int val = getVoxel(pixelCoord);
                 voxelColor = tFunc.getColor(val);
                 double C_r = voxelColor.r;
                 double C_g = voxelColor.g;
                 double C_b = voxelColor.b;
                 double C_a = voxelColor.a;
                 
-                int stepLength = 1;
-                
                 //pixelCoord is the furthest point on the ray between this pixel through the volume data that is still within the bounding box.
                 //iterate through the ray by following the unit vector towards the viewing plane in order to calculate the color and opacity of this pixel.
-                for (int step = 1; step < Math.floor(diagonal); step+=stepLength) {
+                for (int step = 0; step < Math.floor(diagonal); step+=stepLength) {
                     try {
-                       //intensity = Interpolate(uVec, vVec, pixelCoord, max, volumeCenter);
-                       //val = (int) intensity;
-                       val = getVoxel(pixelCoord);
+                       intensity = Interpolate(uVec, vVec, pixelCoord, max, volumeCenter);
+                       val = (int) intensity;
+                       //val = getVoxel(pixelCoord);
                        voxelColor = tFunc.getColor(val);
                        C_r = (1 - voxelColor.a) * C_r + voxelColor.a * voxelColor.r;
                        C_g = (1 - voxelColor.a) * C_g + voxelColor.a * voxelColor.g;
                        C_b = (1 - voxelColor.a) * C_b + voxelColor.a * voxelColor.b;
                        C_a = (1 - voxelColor.a) * C_a + voxelColor.a;
-                       pixelCoord[0] -= viewVec[0] * stepLength;
-                       pixelCoord[1] -= viewVec[1] * stepLength;
-                       pixelCoord[2] -= viewVec[2] * stepLength;                        
+                       pixelCoord[0] -= stepVector[0];
+                       pixelCoord[1] -= stepVector[1];
+                       pixelCoord[2] -= stepVector[2];                        
                     } catch (Exception ex) {
                         System.out.println("Exception at step: " + step + ": " + Arrays.toString(pixelCoord));
                     }
@@ -187,11 +187,16 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             }
         }
     }
+
+    public void setCompositingStep(int step) {
+        compositingStep = step;
+    }
     
     public enum RaycastRenderType {
         SLICER, MIP, COMPOSITING
     }
     
+    private int compositingStep = 1;
     private RaycastRenderType type = RaycastRenderType.SLICER;
     
     public void setRenderType(RaycastRenderType type) {
@@ -367,7 +372,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         double beta = (pixelCoord[1] -(int) Math.floor(pixelCoord[1]))/((int) Math.ceil(pixelCoord[1]) - (int) Math.floor(pixelCoord[1]));
         double gama = (pixelCoord[2] -(int) Math.floor(pixelCoord[2]))/((int) Math.ceil(pixelCoord[2]) - (int) Math.floor(pixelCoord[2]));
         
-        double C00 = (1-alpha)*getVoxel(C000)+ alpha*getVoxel(C100); 
+        double C00 = (1-alpha)*getVoxel(C000) + alpha*getVoxel(C100); 
         double C01 = (1-alpha)*getVoxel(C001) + alpha*getVoxel(C101);
         double C10 = (1-alpha)*getVoxel(C010) + alpha*getVoxel(C110);
         double C11 = (1-alpha)*getVoxel(C011) + alpha*getVoxel(C111);
