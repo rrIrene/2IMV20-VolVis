@@ -60,41 +60,30 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         // sample on a plane through the origin of the volume data
         double max = volume.getMaximum();
         TFColor voxelColor = new TFColor();
+        double diagonal = VectorMath.length(new double[]{volume.getDimX(),volume.getDimY(),volume.getDimZ()});
         
         for (int j = 0; j < image.getHeight(); j++) {
             for (int i = 0; i < image.getWidth(); i++) {          
-                centerCoord[0] = uVec[0] * (i - imageCenter) + vVec[0] * (j - imageCenter)
-                        + volumeCenter[0];
-                centerCoord[1] = uVec[1] * (i - imageCenter) + vVec[1] * (j - imageCenter)
-                        + volumeCenter[1];
-                centerCoord[2] = uVec[2] * (i - imageCenter) + vVec[2] * (j - imageCenter)
-                        + volumeCenter[2];
+                pixelCoord[0] = uVec[0] * (i - imageCenter) + vVec[0] * (j - imageCenter)
+                        + volumeCenter[0] + viewVec[0] * (volumeCenter[0] - 0.1);
+                pixelCoord[1] = uVec[1] * (i - imageCenter) + vVec[1] * (j - imageCenter)
+                        + volumeCenter[1] + viewVec[1] * (volumeCenter[1] - 0.1);
+                pixelCoord[2] = uVec[2] * (i - imageCenter) + vVec[2] * (j - imageCenter)
+                        + volumeCenter[2] + viewVec[2] * (volumeCenter[2] - 0.1);
                 
                 int maxVoxel = 0;
                 
-                //centerCoord forms a vector from viewing screen to middle of volume data.
-                //here we find the length of this vector.
-                double length = VectorMath.length(centerCoord);
-                //x, y, z form a unit vector, translated to viewVec.
-                //we need this to find the maximum voxel.
-                double x = viewVec[0]*centerCoord[0]/length;
-                double y = viewVec[1]*centerCoord[1]/length;
-                double z = viewVec[2]*centerCoord[2]/length;
-                
-                //Get the coordinate in the ray the furthest away within the boundary, and set this to pixelCoord.
-                VectorMath.setVector(pixelCoord, centerCoord[0] + (x * volumeCenter[2]) - 0.1, centerCoord[1] + (y * volumeCenter[2]) - 0.1, centerCoord[2] + (z * volumeCenter[2]) - 0.1);
-                
+                //pixelCoord is the furthest point on the ray between this pixel through the volume data that is still within the bounding box.
                 //iterate through the ray by following the unit vector towards the viewing plane in order to find the maximum voxel.
-                //2*volume.getDimZ() is used because the volume data spans the positive and negative z-axis.
-                for (int step = 0; step <= 2*volume.getDimZ(); step++) {
+                for (int step = 0; step < Math.floor(diagonal); step++) {
                     try {
                        int val = getVoxel(pixelCoord);
                        if (maxVoxel < val)  maxVoxel = val;
-                       pixelCoord[0] -= x;
-                       pixelCoord[1] -= y;
-                       pixelCoord[2] -= z;                        
+                       pixelCoord[0] -= viewVec[0];
+                       pixelCoord[1] -= viewVec[1];
+                       pixelCoord[2] -= viewVec[2];                        
                     } catch (Exception ex) {
-                        System.out.println("Exception at: " + Arrays.toString(pixelCoord));
+                        System.out.println("Exception at step: " + step + ": " + Arrays.toString(pixelCoord));
                     }
                 }
                 
@@ -116,9 +105,87 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             }
         }
     }
+    
     private void compositing(double[] viewMatrix) {
-        //Basically compositing is just MIP that uses transfer function for coloring.
-         mip(viewMatrix);    
+        //Use raytracing similar to MIP
+        // clear image
+        for (int j = 0; j < image.getHeight(); j++) {
+            for (int i = 0; i < image.getWidth(); i++) {
+                image.setRGB(i, j, 0);
+            }
+        }
+
+        // vector uVec and vVec define a plane through the origin, 
+        // perpendicular to the view vector viewVec
+        double[] viewVec = new double[3];
+        double[] uVec = new double[3];
+        double[] vVec = new double[3];
+        VectorMath.setVector(viewVec, viewMatrix[2], viewMatrix[6], viewMatrix[10]);
+        VectorMath.setVector(uVec, viewMatrix[0], viewMatrix[4], viewMatrix[8]);
+        VectorMath.setVector(vVec, viewMatrix[1], viewMatrix[5], viewMatrix[9]);
+
+        // image is square
+        int imageCenter = image.getWidth() / 2;
+
+        double[] pixelCoord = new double[3];
+        double[] centerCoord = new double[3];
+        double[] volumeCenter = new double[3];
+        VectorMath.setVector(volumeCenter, volume.getDimX() / 2, volume.getDimY() / 2, volume.getDimZ() / 2);
+        double diagonal = VectorMath.length(new double[]{volume.getDimX(),volume.getDimY(),volume.getDimZ()});
+        
+        // sample on a plane through the origin of the volume data
+        double max = volume.getMaximum();
+        TFColor voxelColor = new TFColor();
+        
+        for (int j = 0; j < image.getHeight(); j++) {
+            for (int i = 0; i < image.getWidth(); i++) {          
+                pixelCoord[0] = uVec[0] * (i - imageCenter) + vVec[0] * (j - imageCenter)
+                        + volumeCenter[0] + viewVec[0] * (volumeCenter[0] - 0.1);
+                pixelCoord[1] = uVec[1] * (i - imageCenter) + vVec[1] * (j - imageCenter)
+                        + volumeCenter[1] + viewVec[1] * (volumeCenter[1] - 0.1);
+                pixelCoord[2] = uVec[2] * (i - imageCenter) + vVec[2] * (j - imageCenter)
+                        + volumeCenter[2] + viewVec[2] * (volumeCenter[2] - 0.1);
+                              
+                //double intensity = Interpolate(uVec, vVec, pixelCoord, max, volumeCenter);
+                //int val = (int) intensity;  
+                int val = getVoxel(pixelCoord);
+                voxelColor = tFunc.getColor(val);
+                double C_r = voxelColor.r;
+                double C_g = voxelColor.g;
+                double C_b = voxelColor.b;
+                double C_a = voxelColor.a;
+                
+                int stepLength = 1;
+                
+                //pixelCoord is the furthest point on the ray between this pixel through the volume data that is still within the bounding box.
+                //iterate through the ray by following the unit vector towards the viewing plane in order to calculate the color and opacity of this pixel.
+                for (int step = 1; step < Math.floor(diagonal); step+=stepLength) {
+                    try {
+                       //intensity = Interpolate(uVec, vVec, pixelCoord, max, volumeCenter);
+                       //val = (int) intensity;
+                       val = getVoxel(pixelCoord);
+                       voxelColor = tFunc.getColor(val);
+                       C_r = (1 - voxelColor.a) * C_r + voxelColor.a * voxelColor.r;
+                       C_g = (1 - voxelColor.a) * C_g + voxelColor.a * voxelColor.g;
+                       C_b = (1 - voxelColor.a) * C_b + voxelColor.a * voxelColor.b;
+                       C_a = (1 - voxelColor.a) * C_a + voxelColor.a;
+                       pixelCoord[0] -= viewVec[0] * stepLength;
+                       pixelCoord[1] -= viewVec[1] * stepLength;
+                       pixelCoord[2] -= viewVec[2] * stepLength;                        
+                    } catch (Exception ex) {
+                        System.out.println("Exception at step: " + step + ": " + Arrays.toString(pixelCoord));
+                    }
+                }
+                
+                // BufferedImage expects a pixel color packed as ARGB in an int
+                int c_alpha = C_a <= 1.0 ? (int) Math.floor(C_a * 255) : 255;
+                int c_red = C_r <= 1.0 ? (int) Math.floor(C_r * 255) : 255;
+                int c_green = C_g <= 1.0 ? (int) Math.floor(C_g * 255) : 255;
+                int c_blue = C_b <= 1.0 ? (int) Math.floor(C_b * 255) : 255;
+                int pixelColor = (c_alpha << 24) | (c_red << 16) | (c_green << 8) | c_blue;
+                image.setRGB(i, j, pixelColor);
+            }
+        }
     }
     
     public enum RaycastRenderType {
