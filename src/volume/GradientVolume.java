@@ -55,6 +55,22 @@ public class GradientVolume {
         for (int i=0; i<data.length; i++) {
             data[i] = zero;
         }
+        
+        //map the difference of volume's data in the gradient
+        for (int x=1; x<dimX-1; x++) {
+            for (int y=1; y<dimY-1; y++) {
+                for (int z=1; z<dimZ-1; z++) {
+                    try {
+                        int f_x = Math.floorDiv(volume.getVoxel(x+1, y, z) - volume.getVoxel(x-1, y, z), 2);
+                        int f_y = Math.floorDiv(volume.getVoxel(x, y+1, z) - volume.getVoxel(x, y-1, z), 2);
+                        int f_z = Math.floorDiv(volume.getVoxel(x, y, z+1) - volume.getVoxel(x, y, z-1), 2);
+                        setGradient(x,y,z,new VoxelGradient(f_x,f_y,f_z));
+                    } catch (ArrayIndexOutOfBoundsException ex) {
+                        System.out.println("Out of bound: [" + x + ", " + y + ", " + z + "]");
+                    }
+                }
+            }
+        }
                 
     }
     
