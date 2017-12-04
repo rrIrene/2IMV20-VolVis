@@ -133,7 +133,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         double diagonal = VectorMath.length(new double[]{volume.getDimX(),volume.getDimY(),volume.getDimZ()});
         
         // sample on a plane through the origin of the volume data
-        double max = volume.getMaximum();
         TFColor voxelColor = new TFColor();
         //stepVector has the same direction as viewVec, but has length of stepLength.
         double[] stepVector = new double[3];
@@ -150,8 +149,8 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 pixelCoord[2] = uVec[2] * (i - imageCenter) + vVec[2] * (j - imageCenter)
                         + volumeCenter[2] + viewVec[2] * volumeCenter[2];
                    
-                double intensity = Interpolate(uVec, vVec, pixelCoord, max, volumeCenter);
-                int val = (int) intensity;  
+                double voxelval = Interpolate(pixelCoord);
+                int val = (int) voxelval;  
                 //int val = getVoxel(pixelCoord);
                 voxelColor = tFunc.getColor(val);
                 double C_r = voxelColor.r;
@@ -163,8 +162,8 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 //iterate through the ray by following the unit vector towards the viewing plane in order to calculate the color and opacity of this pixel.
                 for (double step = stepLength; step < Math.floor(diagonal); step+=stepLength) {
                     try {
-                       intensity = Interpolate(uVec, vVec, pixelCoord, max, volumeCenter);
-                       val = (int) intensity;
+                       voxelval = Interpolate(pixelCoord);
+                       val = (int) voxelval;
                        //val = getVoxel(pixelCoord);
                        voxelColor = tFunc.getColor(val);
                        C_r = (1 - voxelColor.a) * C_r + voxelColor.a * voxelColor.r;
@@ -404,7 +403,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         VectorMath.setVector(volumeCenter, volume.getDimX() / 2, volume.getDimY() / 2, volume.getDimZ() / 2);
 
         // sample on a plane through the origin of the volume data
-        double max = volume.getMaximum();
         TFColor voxelColor = new TFColor();
 
         
@@ -417,8 +415,8 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 pixelCoord[2] = uVec[2] * (i - imageCenter) + vVec[2] * (j - imageCenter)
                         + volumeCenter[2]-0.5;
                 
-                double intensity = this.Interpolate(uVec, vVec, pixelCoord, max, volumeCenter);
-                int val = (int) intensity;
+                double voxelval = this.Interpolate(pixelCoord);
+                int val = (int) voxelval;
 //                int val = getVoxel(pixelCoord);
                 
                 // Map the intensity to a grey value by linear scaling
@@ -443,7 +441,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
     }
 
-    private double Interpolate(double[] uVec, double[] vVec, double[] pixelCoord, double imageCenter, double[] volumeCenter) {        
+    private double Interpolate(double[] pixelCoord) {        
          
         if (pixelCoord[0] < 0 || pixelCoord[0] > volume.getDimX()-1 || pixelCoord[1] < 0 || pixelCoord[1] > volume.getDimY()-1
                 || pixelCoord[2] < 0 || pixelCoord[2] > volume.getDimZ()-1) {
@@ -482,6 +480,11 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         double alpha = (pixelCoord[0] -(int) Math.floor(pixelCoord[0]))/((int) Math.ceil(pixelCoord[0]) - (int) Math.floor(pixelCoord[0]));
         double beta = (pixelCoord[1] -(int) Math.floor(pixelCoord[1]))/((int) Math.ceil(pixelCoord[1]) - (int) Math.floor(pixelCoord[1]));
         double gama = (pixelCoord[2] -(int) Math.floor(pixelCoord[2]))/((int) Math.ceil(pixelCoord[2]) - (int) Math.floor(pixelCoord[2]));
+        
+        
+        if(Double.isNaN(alpha)) alpha = 0.0;
+        if(Double.isNaN(beta))  beta = 0.0;
+        if(Double.isNaN(gama))  gama = 0.0;
         
         double C00 = (1-alpha)*getVoxel(C000) + alpha*getVoxel(C100); 
         double C01 = (1-alpha)*getVoxel(C001) + alpha*getVoxel(C101);
