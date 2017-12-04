@@ -18,6 +18,7 @@ import util.TFChangeListener;
 import util.VectorMath;
 import volume.GradientVolume;
 import volume.Volume;
+import volume.VoxelGradient;
 
 /**
  *
@@ -64,11 +65,11 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         for (int j = 0; j < image.getHeight(); j++) {
             for (int i = 0; i < image.getWidth(); i++) {          
                 pixelCoord[0] = uVec[0] * (i - imageCenter) + vVec[0] * (j - imageCenter)
-                        + volumeCenter[0] + viewVec[0] * (volumeCenter[0] - 0.1);
+                        + volumeCenter[0] + viewVec[0] * volumeCenter[0];
                 pixelCoord[1] = uVec[1] * (i - imageCenter) + vVec[1] * (j - imageCenter)
-                        + volumeCenter[1] + viewVec[1] * (volumeCenter[1] - 0.1);
+                        + volumeCenter[1] + viewVec[1] * volumeCenter[1];
                 pixelCoord[2] = uVec[2] * (i - imageCenter) + vVec[2] * (j - imageCenter)
-                        + volumeCenter[2] + viewVec[2] * (volumeCenter[2] - 0.1);
+                        + volumeCenter[2] + viewVec[2] * volumeCenter[2];
                 
                 int maxVoxel = 0;
                 
@@ -142,11 +143,11 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         for (int j = 0; j < image.getHeight(); j++) {
             for (int i = 0; i < image.getWidth(); i++) {          
                 pixelCoord[0] = uVec[0] * (i - imageCenter) + vVec[0] * (j - imageCenter)
-                        + volumeCenter[0] + viewVec[0] * (volumeCenter[0] - 0.1);
+                        + volumeCenter[0] + viewVec[0] * volumeCenter[0];
                 pixelCoord[1] = uVec[1] * (i - imageCenter) + vVec[1] * (j - imageCenter)
-                        + volumeCenter[1] + viewVec[1] * (volumeCenter[1] - 0.1);
+                        + volumeCenter[1] + viewVec[1] * volumeCenter[1];
                 pixelCoord[2] = uVec[2] * (i - imageCenter) + vVec[2] * (j - imageCenter)
-                        + volumeCenter[2] + viewVec[2] * (volumeCenter[2] - 0.1);
+                        + volumeCenter[2] + viewVec[2] * volumeCenter[2];
                    
                 double intensity = Interpolate(uVec, vVec, pixelCoord, max, volumeCenter);
                 int val = (int) intensity;  
@@ -191,9 +192,102 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     public void setCompositingStep(int step) {
         compositingStep = step;
     }
+
+    private void tf2d(double[] viewMatrix) {
+        //Use raytracing similar to MIP
+        // clear image
+        for (int j = 0; j < image.getHeight(); j++) {
+            for (int i = 0; i < image.getWidth(); i++) {
+                image.setRGB(i, j, 0);
+            }
+        }
+
+        // vector uVec and vVec define a plane through the origin, 
+        // perpendicular to the view vector viewVec
+        double[] viewVec = new double[3];
+        double[] uVec = new double[3];
+        double[] vVec = new double[3];
+        VectorMath.setVector(viewVec, viewMatrix[2], viewMatrix[6], viewMatrix[10]);
+        VectorMath.setVector(uVec, viewMatrix[0], viewMatrix[4], viewMatrix[8]);
+        VectorMath.setVector(vVec, viewMatrix[1], viewMatrix[5], viewMatrix[9]);
+
+        // image is square
+        int imageCenter = image.getWidth() / 2;
+
+        double[] pixelCoord = new double[3];
+        double[] volumeCenter = new double[3];
+        VectorMath.setVector(volumeCenter, volume.getDimX() / 2, volume.getDimY() / 2, volume.getDimZ() / 2);
+        double diagonal = VectorMath.length(new double[]{volume.getDimX(),volume.getDimY(),volume.getDimZ()});
+        
+        // sample on a plane through the origin of the volume data
+        TFColor voxelColor = new TFColor();
+        double[] stepVector = new double[3];
+        if (diagonal < compositingStep) compositingStep = (int)diagonal;
+        VectorMath.setVector(stepVector, viewVec[0], viewVec[1], viewVec[2]);
+        
+        for (int j = 0; j < image.getHeight(); j++) {
+            for (int i = 0; i < image.getWidth(); i++) {          
+                pixelCoord[0] = uVec[0] * (i - imageCenter) + vVec[0] * (j - imageCenter)
+                        + volumeCenter[0] + viewVec[0] * volumeCenter[0];
+                pixelCoord[1] = uVec[1] * (i - imageCenter) + vVec[1] * (j - imageCenter)
+                        + volumeCenter[1] + viewVec[1] * volumeCenter[1];
+                pixelCoord[2] = uVec[2] * (i - imageCenter) + vVec[2] * (j - imageCenter)
+                        + volumeCenter[2] + viewVec[2] * volumeCenter[2];
+                
+                int val = getVoxel(pixelCoord);
+
+                    //Calculate the opacity using tf2d mapping
+                    voxelColor = getTF2dColor(val);
+                    double C_a = 1 - voxelColor.a;
+
+                    //pixelCoord is the furthest point on the ray between this pixel through the volume data that is still within the bounding box.
+                    //iterate through the ray by following the unit vector towards the viewing plane in order to calculate the color and opacity of this pixel.
+                    for (int step = 0; step < Math.floor(diagonal); step++) {
+                           val = getVoxel(pixelCoord);
+                           voxelColor = getTF2dColor(val);
+                           C_a = (1 - voxelColor.a) * C_a;
+                           pixelCoord[0] -= stepVector[0];
+                           pixelCoord[1] -= stepVector[1];
+                           pixelCoord[2] -= stepVector[2];  
+                    }           
+                
+                //System.out.println("[" + i + ", " + j + "]: C_a: " + C_a);
+                
+                // BufferedImage expects a pixel color packed as ARGB in an int
+                int c_alpha = C_a <= 1.0 ? (int) Math.floor(C_a * 255) : 255;
+                int c_red = voxelColor.r <= 1.0 ? (int) Math.floor(voxelColor.r * 255) : 255;
+                int c_green = voxelColor.g <= 1.0 ? (int) Math.floor(voxelColor.g * 255) : 255;
+                int c_blue = voxelColor.b <= 1.0 ? (int) Math.floor(voxelColor.b * 255) : 255;
+                int pixelColor = (c_alpha << 24) | (c_red << 16) | (c_green << 8) | c_blue;
+                image.setRGB(i, j, pixelColor);
+            }
+        }
+    }
+
+    private TFColor getTF2dColor(int val) {
+        //Get important values from tf2d editor
+        int f_v = tfEditor2D.triangleWidget.baseIntensity;
+        double r = tfEditor2D.triangleWidget.radius;
+        TFColor color_v = tfEditor2D.triangleWidget.color;
+        double delta_val = Math.abs(gradients.getVoxel(val).mag);
+        
+        double factor = 0;
+        
+        //Get the opacity value using Levoy's formula.
+        if (f_v == val && delta_val == 0) {
+            factor = 1;
+        } else if (delta_val > 0) {
+            //val-(r*delta_val) <= f_v && f_v <= val+(r*delta_val)
+            factor = 1 - (Math.abs((f_v-val)/delta_val)/r);
+        }
+        
+        color_v.a = color_v.a * factor;
+        
+        return color_v;
+    }
     
     public enum RaycastRenderType {
-        SLICER, MIP, COMPOSITING
+        SLICER, MIP, COMPOSITING, TF2D
     }
     
     private int compositingStep = 1;
@@ -255,8 +349,8 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
     short getVoxel(double[] coord) {
 
-        if (coord[0] < 0 || coord[0] > volume.getDimX() || coord[1] < 0 || coord[1] > volume.getDimY()
-                || coord[2] < 0 || coord[2] > volume.getDimZ()) {
+        if (coord[0] < 0 || coord[0] >= volume.getDimX() || coord[1] < 0 || coord[1] >= volume.getDimY()
+                || coord[2] < 0 || coord[2] >= volume.getDimZ()) {
             return 0;
         }
 
@@ -265,6 +359,19 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         int z = (int) Math.floor(coord[2]);
 
         return volume.getVoxel(x, y, z);
+    }
+    
+    VoxelGradient getGradient(double[] coord) {
+        if (coord[0] < 0 || coord[0] > gradients.getDimX() || coord[1] < 0 || coord[1] > gradients.getDimY()
+                || coord[2] < 0 || coord[2] > gradients.getDimZ()) {
+            return null;
+        }
+
+        int x = (int) Math.floor(coord[0]);
+        int y = (int) Math.floor(coord[1]);
+        int z = (int) Math.floor(coord[2]);
+        
+        return gradients.getGradient(x, y, z);
     }
 
 
@@ -468,6 +575,9 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 break;
             case COMPOSITING:
                 compositing(viewMatrix);
+                break;
+            case TF2D:
+                tf2d(viewMatrix);
                 break;
         }
         

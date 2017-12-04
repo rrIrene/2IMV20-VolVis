@@ -160,41 +160,33 @@ public class RaycastRendererPanel extends javax.swing.JPanel {
     }// </editor-fold>//GEN-END:initComponents
 
     private void mipButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mipButtonActionPerformed
-        try {                 
-            stepTextbox.setVisible(false);
-            stepLabel.setVisible(false);
-            renderer.setRenderType(RaycastRenderer.RaycastRenderType.MIP);
-            renderer.changed();
-        } catch (UnsupportedOperationException ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage());
-        }
+        stepTextbox.setVisible(false);
+        stepLabel.setVisible(false);
+        renderer.setRenderType(RaycastRenderer.RaycastRenderType.MIP);
+        renderer.changed();
     }//GEN-LAST:event_mipButtonActionPerformed
 
     private void slicerButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_slicerButtonActionPerformed
-        try {                 
-            stepTextbox.setVisible(false);
-            stepLabel.setVisible(false);
-            renderer.setRenderType(RaycastRenderer.RaycastRenderType.SLICER);
-            renderer.changed();
-        } catch (UnsupportedOperationException ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage());
-        }
+        stepTextbox.setVisible(false);
+        stepLabel.setVisible(false);
+        renderer.setRenderType(RaycastRenderer.RaycastRenderType.SLICER);
+        renderer.changed();
     }//GEN-LAST:event_slicerButtonActionPerformed
 
     private void compositingButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_compositingButtonActionPerformed
-        try {            
-            stepTextbox.setVisible(true);
-            stepLabel.setVisible(true);
-            renderer.setCompositingStep(parseInt(stepTextbox.getText()));
-            renderer.setRenderType(RaycastRenderer.RaycastRenderType.COMPOSITING);
-            renderer.changed();
-        } catch (UnsupportedOperationException ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage());
-        }
+        stepTextbox.setVisible(true);
+        stepLabel.setVisible(true);
+        renderer.setCompositingStep(parseInt(stepTextbox.getText()));
+        renderer.setRenderType(RaycastRenderer.RaycastRenderType.COMPOSITING);
+        renderer.changed();
     }//GEN-LAST:event_compositingButtonActionPerformed
 
     private void tf2dButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_tf2dButtonActionPerformed
-        JOptionPane.showMessageDialog(this, "Not implemented.");
+        stepTextbox.setVisible(false);
+        stepLabel.setVisible(false);
+        renderer.getTF2DPanel().setVisible(true);
+        renderer.setRenderType(RaycastRenderer.RaycastRenderType.TF2D);
+        renderer.changed();
     }//GEN-LAST:event_tf2dButtonActionPerformed
 
     private void shadingCheckboxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_shadingCheckboxActionPerformed
