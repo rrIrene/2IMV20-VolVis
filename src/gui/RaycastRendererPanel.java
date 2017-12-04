@@ -97,10 +97,16 @@ public class RaycastRendererPanel extends javax.swing.JPanel {
         });
 
         stepLabel.setLabelFor(stepTextbox);
-        stepLabel.setText("steps");
+        stepLabel.setText("Rendering steps:");
         stepLabel.setName("stepLabel"); // NOI18N
 
         stepTextbox.setText("50");
+        stepTextbox.setEnabled(false);
+        stepTextbox.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                stepTextboxActionPerformed(evt);
+            }
+        });
         stepTextbox.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyReleased(java.awt.event.KeyEvent evt) {
                 stepTextboxKeyReleased(evt);
@@ -113,24 +119,24 @@ public class RaycastRendererPanel extends javax.swing.JPanel {
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addComponent(jLabel1)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(renderingSpeedLabel)
-                        .addGap(45, 45, 45))
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(jLabel1)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(renderingSpeedLabel))
                             .addComponent(compositingButton)
                             .addComponent(tf2dButton)
                             .addComponent(mipButton)
                             .addComponent(slicerButton)
                             .addComponent(shadingCheckbox))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addContainerGap(360, Short.MAX_VALUE))
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(stepLabel)
+                        .addGap(38, 38, 38)
                         .addComponent(stepTextbox, javax.swing.GroupLayout.PREFERRED_SIZE, 48, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(3, 3, 3)))
-                .addComponent(stepLabel)
-                .addContainerGap(285, Short.MAX_VALUE))
+                        .addGap(0, 0, Short.MAX_VALUE))))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -139,51 +145,45 @@ public class RaycastRendererPanel extends javax.swing.JPanel {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel1)
                     .addComponent(renderingSpeedLabel))
-                .addGap(49, 49, 49)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(stepLabel)
+                    .addComponent(stepTextbox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(17, 17, 17)
                 .addComponent(slicerButton)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(mipButton)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(compositingButton)
-                    .addComponent(stepLabel)
-                    .addComponent(stepTextbox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addComponent(compositingButton)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(tf2dButton)
                 .addGap(18, 18, 18)
                 .addComponent(shadingCheckbox)
                 .addContainerGap(134, Short.MAX_VALUE))
         );
-
-        stepLabel.setVisible(false);
-        stepTextbox.setVisible(false);
     }// </editor-fold>//GEN-END:initComponents
 
     private void mipButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mipButtonActionPerformed
-        stepTextbox.setVisible(false);
-        stepLabel.setVisible(false);
+        stepTextbox.setEnabled(false);
         renderer.setRenderType(RaycastRenderer.RaycastRenderType.MIP);
         renderer.changed();
     }//GEN-LAST:event_mipButtonActionPerformed
 
     private void slicerButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_slicerButtonActionPerformed
-        stepTextbox.setVisible(false);
-        stepLabel.setVisible(false);
+        stepTextbox.setEnabled(false);
         renderer.setRenderType(RaycastRenderer.RaycastRenderType.SLICER);
         renderer.changed();
     }//GEN-LAST:event_slicerButtonActionPerformed
 
     private void compositingButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_compositingButtonActionPerformed
-        stepTextbox.setVisible(true);
-        stepLabel.setVisible(true);
+        stepTextbox.setEnabled(true);
         renderer.setCompositingStep(parseInt(stepTextbox.getText()));
         renderer.setRenderType(RaycastRenderer.RaycastRenderType.COMPOSITING);
         renderer.changed();
     }//GEN-LAST:event_compositingButtonActionPerformed
 
     private void tf2dButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_tf2dButtonActionPerformed
-        stepTextbox.setVisible(false);
-        stepLabel.setVisible(false);
+        stepTextbox.setEnabled(true);
         renderer.getTF2DPanel().setVisible(true);
         renderer.setRenderType(RaycastRenderer.RaycastRenderType.TF2D);
         renderer.changed();
@@ -200,6 +200,10 @@ public class RaycastRendererPanel extends javax.swing.JPanel {
             renderer.changed();
         }
     }//GEN-LAST:event_stepTextboxKeyReleased
+
+    private void stepTextboxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_stepTextboxActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_stepTextboxActionPerformed
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.ButtonGroup buttonGroup1;

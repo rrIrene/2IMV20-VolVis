@@ -135,9 +135,10 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         // sample on a plane through the origin of the volume data
         double max = volume.getMaximum();
         TFColor voxelColor = new TFColor();
+        //stepVector has the same direction as viewVec, but has length of stepLength.
         double[] stepVector = new double[3];
-        if (diagonal < compositingStep) compositingStep = (int)diagonal;
-        double stepLength = diagonal / compositingStep;
+        double stepLength = 1;
+        if (diagonal > compositingStep) stepLength = Math.floor(diagonal / compositingStep);
         VectorMath.setVector(stepVector, viewVec[0] * stepLength, viewVec[1] * stepLength, viewVec[2] * stepLength);
         
         for (int j = 0; j < image.getHeight(); j++) {
@@ -160,7 +161,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 
                 //pixelCoord is the furthest point on the ray between this pixel through the volume data that is still within the bounding box.
                 //iterate through the ray by following the unit vector towards the viewing plane in order to calculate the color and opacity of this pixel.
-                for (int step = 0; step < Math.floor(diagonal); step+=stepLength) {
+                for (double step = stepLength; step < Math.floor(diagonal); step+=stepLength) {
                     try {
                        intensity = Interpolate(uVec, vVec, pixelCoord, max, volumeCenter);
                        val = (int) intensity;
@@ -221,9 +222,11 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         
         // sample on a plane through the origin of the volume data
         TFColor voxelColor = new TFColor();
+        //stepVector has the same direction as viewVec, but has length of stepLength.
         double[] stepVector = new double[3];
-        if (diagonal < compositingStep) compositingStep = (int)diagonal;
-        VectorMath.setVector(stepVector, viewVec[0], viewVec[1], viewVec[2]);
+        double stepLength = 1;
+        if (diagonal > compositingStep) stepLength = Math.floor(diagonal / compositingStep);
+        VectorMath.setVector(stepVector, viewVec[0] * stepLength, viewVec[1] * stepLength, viewVec[2] * stepLength);
         
         for (int j = 0; j < image.getHeight(); j++) {
             for (int i = 0; i < image.getWidth(); i++) {          
@@ -233,25 +236,21 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                         + volumeCenter[1] + viewVec[1] * volumeCenter[1];
                 pixelCoord[2] = uVec[2] * (i - imageCenter) + vVec[2] * (j - imageCenter)
                         + volumeCenter[2] + viewVec[2] * volumeCenter[2];
-                
-                int val = getVoxel(pixelCoord);
+               
+                voxelColor = getTF2dColor(pixelCoord);
+                double C_a = 1 - voxelColor.a;
 
-                    //Calculate the opacity using tf2d mapping
-                    voxelColor = getTF2dColor(val);
-                    double C_a = 1 - voxelColor.a;
-
-                    //pixelCoord is the furthest point on the ray between this pixel through the volume data that is still within the bounding box.
-                    //iterate through the ray by following the unit vector towards the viewing plane in order to calculate the color and opacity of this pixel.
-                    for (int step = 0; step < Math.floor(diagonal); step++) {
-                           val = getVoxel(pixelCoord);
-                           voxelColor = getTF2dColor(val);
-                           C_a = (1 - voxelColor.a) * C_a;
-                           pixelCoord[0] -= stepVector[0];
-                           pixelCoord[1] -= stepVector[1];
-                           pixelCoord[2] -= stepVector[2];  
-                    }           
+                //pixelCoord is the furthest point on the ray between this pixel through the volume data that is still within the bounding box.
+                //iterate through the ray by following the unit vector towards the viewing plane in order to calculate the color and opacity of this pixel.
+                for (double step = stepLength; step < Math.floor(diagonal); step+=stepLength) {
+                    voxelColor = getTF2dColor(pixelCoord);
+                    C_a = (1 - voxelColor.a) * C_a;
+                    pixelCoord[0] -= stepVector[0];
+                    pixelCoord[1] -= stepVector[1];
+                    pixelCoord[2] -= stepVector[2];  
+                }           
                 
-                //System.out.println("[" + i + ", " + j + "]: C_a: " + C_a);
+                C_a = 1 - C_a;
                 
                 // BufferedImage expects a pixel color packed as ARGB in an int
                 int c_alpha = C_a <= 1.0 ? (int) Math.floor(C_a * 255) : 255;
@@ -264,24 +263,28 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         }
     }
 
-    private TFColor getTF2dColor(int val) {
+    private TFColor getTF2dColor(double[] coord) {
         //Get important values from tf2d editor
         int f_v = tfEditor2D.triangleWidget.baseIntensity;
         double r = tfEditor2D.triangleWidget.radius;
-        TFColor color_v = tfEditor2D.triangleWidget.color;
-        double delta_val = Math.abs(gradients.getVoxel(val).mag);
+        
+        int f_x = getVoxel(coord);
+        double delta_fx = getGradient(coord).mag;
         
         double factor = 0;
         
         //Get the opacity value using Levoy's formula.
-        if (f_v == val && delta_val == 0) {
+        if (delta_fx == 0.0 && f_v == f_x) {
             factor = 1;
-        } else if (delta_val > 0) {
-            //val-(r*delta_val) <= f_v && f_v <= val+(r*delta_val)
-            factor = 1 - (Math.abs((f_v-val)/delta_val)/r);
+        } else if (delta_fx > 0.0 && f_x-(r*delta_fx) <= f_v && f_v <= f_x+(r*delta_fx)) {
+            factor = 1 - Math.abs((f_v-f_x)/delta_fx) / r;
         }
         
-        color_v.a = color_v.a * factor;
+        TFColor color_v = new TFColor();
+        color_v.r = tfEditor2D.triangleWidget.color.r;
+        color_v.g = tfEditor2D.triangleWidget.color.g;
+        color_v.b = tfEditor2D.triangleWidget.color.b;        
+        color_v.a = tfEditor2D.triangleWidget.color.a * factor;
         
         return color_v;
     }
@@ -362,9 +365,9 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     }
     
     VoxelGradient getGradient(double[] coord) {
-        if (coord[0] < 0 || coord[0] > gradients.getDimX() || coord[1] < 0 || coord[1] > gradients.getDimY()
-                || coord[2] < 0 || coord[2] > gradients.getDimZ()) {
-            return null;
+        if (coord[0] < 0 || coord[0] >= gradients.getDimX() || coord[1] < 0 || coord[1] >= gradients.getDimY()
+                || coord[2] < 0 || coord[2] >= gradients.getDimZ()) {
+            return new VoxelGradient();
         }
 
         int x = (int) Math.floor(coord[0]);
