@@ -237,6 +237,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 pixelCoord[2] = uVec[2] * (i - imageCenter) + vVec[2] * (j - imageCenter)
                         + volumeCenter[2] + viewVec[2] * volumeCenter[2];
                
+                //Calculate the color & opacity using tf2d mapping
                 voxelColor = getTF2dColor(pixelCoord);
                 double C_a = 1 - voxelColor.a;
 
