@@ -237,14 +237,23 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                         + volumeCenter[2] + viewVec[2] * volumeCenter[2];
                
                 //Calculate the color & opacity using tf2d mapping
-                voxelColor = getTF2dColor(pixelCoord);
+                voxelColor = getTF2dColor(pixelCoord, viewVec);
                 double C_a = 1 - voxelColor.a;
+                double C_r = voxelColor.r;
+                double C_g = voxelColor.g;
+                double C_b = voxelColor.b;
 
                 //pixelCoord is the furthest point on the ray between this pixel through the volume data that is still within the bounding box.
                 //iterate through the ray by following the unit vector towards the viewing plane in order to calculate the color and opacity of this pixel.
                 for (double step = stepLength; step < Math.floor(diagonal); step+=stepLength) {
-                    voxelColor = getTF2dColor(pixelCoord);
+                    voxelColor = getTF2dColor(pixelCoord, viewVec);
                     C_a = (1 - voxelColor.a) * C_a;
+                    if (volumeShading) {
+                        //Only reconsider voxelColor when we're applying volume shading. Otherwise, just use the color selected by triangleWidget.
+                        C_r = (1 - voxelColor.a) * C_r + voxelColor.a * voxelColor.r;
+                        C_g = (1 - voxelColor.a) * C_g + voxelColor.a * voxelColor.g;
+                        C_b = (1 - voxelColor.a) * C_b + voxelColor.a * voxelColor.b;
+                    }
                     pixelCoord[0] -= stepVector[0];
                     pixelCoord[1] -= stepVector[1];
                     pixelCoord[2] -= stepVector[2];  
@@ -254,22 +263,23 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 
                 // BufferedImage expects a pixel color packed as ARGB in an int
                 int c_alpha = C_a <= 1.0 ? (int) Math.floor(C_a * 255) : 255;
-                int c_red = voxelColor.r <= 1.0 ? (int) Math.floor(voxelColor.r * 255) : 255;
-                int c_green = voxelColor.g <= 1.0 ? (int) Math.floor(voxelColor.g * 255) : 255;
-                int c_blue = voxelColor.b <= 1.0 ? (int) Math.floor(voxelColor.b * 255) : 255;
+                int c_red = C_r <= 1.0 ? (int) Math.floor(C_r * 255) : 255;
+                int c_green = C_g <= 1.0 ? (int) Math.floor(C_g * 255) : 255;
+                int c_blue = C_b <= 1.0 ? (int) Math.floor(C_b * 255) : 255;
                 int pixelColor = (c_alpha << 24) | (c_red << 16) | (c_green << 8) | c_blue;
                 image.setRGB(i, j, pixelColor);
             }
         }
     }
 
-    private TFColor getTF2dColor(double[] coord) {
+    private TFColor getTF2dColor(double[] coord, double[] V) {
         //Get important values from tf2d editor
         int f_v = tfEditor2D.triangleWidget.baseIntensity;
         double r = tfEditor2D.triangleWidget.radius;
         
         int f_x = getVoxel(coord);
-        double delta_fx = getGradient(coord).mag;
+        VoxelGradient grad = getGradient(coord);
+        double delta_fx = grad.mag;
         
         double factor = 0;
         
@@ -281,11 +291,28 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         }
         
         TFColor color_v = new TFColor();
+        color_v.a = tfEditor2D.triangleWidget.color.a * factor;
         color_v.r = tfEditor2D.triangleWidget.color.r;
         color_v.g = tfEditor2D.triangleWidget.color.g;
-        color_v.b = tfEditor2D.triangleWidget.color.b;        
-        color_v.a = tfEditor2D.triangleWidget.color.a * factor;
+        color_v.b = tfEditor2D.triangleWidget.color.b; 
         
+        //implement Phong shading to get the right colors, if applicable
+        if (volumeShading) {
+            //Kniss: "The normalized gradient is often used as the normal for surface-based volume shading"
+            double[] N = new double[3];
+            VectorMath.setVector(N, grad.x/grad.mag, grad.y/grad.mag, grad.z/grad.mag);
+            //Calculate the dot products
+            double diffProduct = VectorMath.dotproduct(V, N);
+            if (diffProduct > 0.0) {
+                double specProduct = VectorMath.dotproduct(N, V);   //H = L+V/|L+V| = V, because V = viewVec which is already normalized.
+                if (specProduct > 0.0) {
+                    color_v.r = tfEditor2D.ambientColor.r * k_ambient + tfEditor2D.triangleWidget.color.r * k_diff * diffProduct + k_spec * Math.pow(specProduct, phong_alpha);
+                    color_v.g = tfEditor2D.ambientColor.g * k_ambient + tfEditor2D.triangleWidget.color.g * k_diff * diffProduct + k_spec * Math.pow(specProduct, phong_alpha);
+                    color_v.b = tfEditor2D.ambientColor.b * k_ambient + tfEditor2D.triangleWidget.color.b * k_diff * diffProduct + k_spec * Math.pow(specProduct, phong_alpha);
+                }
+            }
+        } 
+             
         return color_v;
     }
     
@@ -295,9 +322,18 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     
     private int compositingStep = 1;
     private RaycastRenderType type = RaycastRenderType.SLICER;
+    private boolean volumeShading = false;
+    private double k_ambient = 0.1;
+    private double k_diff = 0.7;
+    private double k_spec = 0.2;
+    private int phong_alpha = 10;
     
     public void setRenderType(RaycastRenderType type) {
         this.type = type;
+    }
+    
+    public void toggleVolumeShading() {
+	this.volumeShading = !this.volumeShading;
     }
     
     public RaycastRenderer() {
@@ -376,7 +412,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         
         return gradients.getGradient(x, y, z);
     }
-
 
     void slicer(double[] viewMatrix) {
         // clear image

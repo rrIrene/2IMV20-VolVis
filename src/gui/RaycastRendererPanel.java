@@ -190,13 +190,20 @@ public class RaycastRendererPanel extends javax.swing.JPanel {
     }//GEN-LAST:event_tf2dButtonActionPerformed
 
     private void shadingCheckboxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_shadingCheckboxActionPerformed
-        JOptionPane.showMessageDialog(this, "Not implemented.");
+        renderer.toggleVolumeShading();
+        if (tf2dButton.isSelected()) {
+            renderer.changed();
+        }
     }//GEN-LAST:event_shadingCheckboxActionPerformed
 
     private void stepTextboxKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_stepTextboxKeyReleased
         if (evt.getKeyCode()==KeyEvent.VK_ENTER){
             renderer.setCompositingStep(parseInt(stepTextbox.getText()));
-            renderer.setRenderType(RaycastRenderer.RaycastRenderType.COMPOSITING);
+            if (compositingButton.isSelected()) {
+                renderer.setRenderType(RaycastRenderer.RaycastRenderType.COMPOSITING);
+            } else {
+                renderer.setRenderType(RaycastRenderer.RaycastRenderType.TF2D);
+            }
             renderer.changed();
         }
     }//GEN-LAST:event_stepTextboxKeyReleased
