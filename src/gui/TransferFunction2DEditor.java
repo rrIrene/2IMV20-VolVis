@@ -30,9 +30,12 @@ public class TransferFunction2DEditor extends javax.swing.JPanel {
     private short maxIntensity;
     public double maxGradientMagnitude;
     private ArrayList<TFChangeListener> listeners = new ArrayList<TFChangeListener>();
-    public TFColor ambientColor = new TFColor();
+    public TFColor ambientColor = new TFColor(0,0,0,1);
+    public double k_ambient = 0.1;
+    public double k_diff = 0.7;
+    public double k_spec = 0.2;
+    public int phong_alpha = 10;
 
-    
     public TransferFunction2DEditor(Volume volume, GradientVolume gradientvolume) {
         initComponents();
 
@@ -49,9 +52,6 @@ public class TransferFunction2DEditor extends javax.swing.JPanel {
         labelMaxVal.setText(Integer.toString(maxIntensity));
 
         triangleWidget = new TriangleWidget((short) (maxIntensity / 2), 0.2);
-        ambientColor.r = triangleWidget.color.r;
-        ambientColor.g = triangleWidget.color.g;
-        ambientColor.b = triangleWidget.color.b;
         setSelectedInfo();
     }
 
@@ -93,6 +93,9 @@ public class TransferFunction2DEditor extends javax.swing.JPanel {
         opacityLabel.setText(String.format("%.1f", triangleWidget.color.a));
         colorButton.setBackground(new Color((float) triangleWidget.color.r, (float) triangleWidget.color.g, (float) triangleWidget.color.b));
         ambientButton.setBackground(new Color((float) ambientColor.r, (float) ambientColor.g, (float) ambientColor.b));
+        ambientTextbox.setText(String.format("%.3f", k_ambient));
+        diffuseTextbox.setText(String.format("%.3f", k_diff));
+        specularTextbox.setText(String.format("%.3f", k_spec));
     }
 
     /**
@@ -122,6 +125,11 @@ public class TransferFunction2DEditor extends javax.swing.JPanel {
         radiusLabel = new javax.swing.JTextField();
         ambientButton = new javax.swing.JButton();
         jLabel8 = new javax.swing.JLabel();
+        diffuseTextbox = new javax.swing.JTextField();
+        jLabel9 = new javax.swing.JLabel();
+        jLabel10 = new javax.swing.JLabel();
+        specularTextbox = new javax.swing.JTextField();
+        ambientTextbox = new javax.swing.JTextField();
 
         javax.swing.GroupLayout plotPanelLayout = new javax.swing.GroupLayout(plotPanel);
         plotPanel.setLayout(plotPanelLayout);
@@ -190,6 +198,34 @@ public class TransferFunction2DEditor extends javax.swing.JPanel {
 
         jLabel8.setText("Ambient");
 
+        diffuseTextbox.setText("jTextField2");
+        diffuseTextbox.setMinimumSize(new java.awt.Dimension(84, 28));
+        diffuseTextbox.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                diffuseTextboxActionPerformed(evt);
+            }
+        });
+
+        jLabel9.setText("Diffuse");
+
+        jLabel10.setText("Specular");
+
+        specularTextbox.setText("jTextField2");
+        specularTextbox.setMinimumSize(new java.awt.Dimension(84, 28));
+        specularTextbox.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                specularTextboxActionPerformed(evt);
+            }
+        });
+
+        ambientTextbox.setText("jTextField2");
+        ambientTextbox.setMinimumSize(new java.awt.Dimension(84, 28));
+        ambientTextbox.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                ambientTextboxActionPerformed(evt);
+            }
+        });
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
         layout.setHorizontalGroup(
@@ -233,7 +269,20 @@ public class TransferFunction2DEditor extends javax.swing.JPanel {
                                     .addGroup(layout.createSequentialGroup()
                                         .addComponent(jLabel8)
                                         .addGap(18, 18, 18)
-                                        .addComponent(ambientButton, javax.swing.GroupLayout.PREFERRED_SIZE, 75, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                        .addComponent(ambientButton, javax.swing.GroupLayout.PREFERRED_SIZE, 75, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(ambientTextbox, javax.swing.GroupLayout.PREFERRED_SIZE, 84, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                    .addGroup(layout.createSequentialGroup()
+                                        .addGap(3, 3, 3)
+                                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                                            .addGroup(layout.createSequentialGroup()
+                                                .addComponent(jLabel10)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                                .addComponent(specularTextbox, javax.swing.GroupLayout.PREFERRED_SIZE, 84, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                            .addGroup(layout.createSequentialGroup()
+                                                .addComponent(jLabel9)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                                .addComponent(diffuseTextbox, javax.swing.GroupLayout.PREFERRED_SIZE, 84, javax.swing.GroupLayout.PREFERRED_SIZE)))))
                                 .addContainerGap())))
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(plotPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
@@ -270,11 +319,22 @@ public class TransferFunction2DEditor extends javax.swing.JPanel {
                     .addComponent(opacityLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(colorButton, javax.swing.GroupLayout.PREFERRED_SIZE, 29, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 29, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(ambientButton, javax.swing.GroupLayout.PREFERRED_SIZE, 29, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel8, javax.swing.GroupLayout.PREFERRED_SIZE, 29, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(colorButton, javax.swing.GroupLayout.PREFERRED_SIZE, 29, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 29, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(ambientButton, javax.swing.GroupLayout.PREFERRED_SIZE, 29, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jLabel8, javax.swing.GroupLayout.PREFERRED_SIZE, 29, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(jLabel9)
+                            .addComponent(diffuseTextbox, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(jLabel10)
+                            .addComponent(specularTextbox, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                    .addComponent(ambientTextbox, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap(44, Short.MAX_VALUE))
         );
     }// </editor-fold>//GEN-END:initComponents
 
@@ -319,6 +379,39 @@ public class TransferFunction2DEditor extends javax.swing.JPanel {
         }
     }//GEN-LAST:event_ambientButtonActionPerformed
 
+    private void diffuseTextboxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_diffuseTextboxActionPerformed
+        try {
+            double value = Double.parseDouble(diffuseTextbox.getText());
+            k_diff = value;
+        } catch (NumberFormatException e) {
+            k_diff = 0.7;
+        }
+        setSelectedInfo();
+        changed();
+    }//GEN-LAST:event_diffuseTextboxActionPerformed
+
+    private void specularTextboxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_specularTextboxActionPerformed
+        try {
+            double value = Double.parseDouble(specularTextbox.getText());
+            k_spec = value;
+        } catch (NumberFormatException e) {
+            k_spec = 0.2;
+        }
+        setSelectedInfo();
+        changed();
+    }//GEN-LAST:event_specularTextboxActionPerformed
+
+    private void ambientTextboxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_ambientTextboxActionPerformed
+        try {
+            double value = Double.parseDouble(ambientTextbox.getText());
+            k_ambient = value;
+        } catch (NumberFormatException e) {
+            k_ambient = 0.1;
+        }
+        setSelectedInfo();
+        changed();
+    }//GEN-LAST:event_ambientTextboxActionPerformed
+
     public class TriangleWidget {
 
         public short baseIntensity;
@@ -335,9 +428,12 @@ public class TransferFunction2DEditor extends javax.swing.JPanel {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton ambientButton;
+    private javax.swing.JTextField ambientTextbox;
     private javax.swing.JButton colorButton;
+    private javax.swing.JTextField diffuseTextbox;
     private javax.swing.JTextField intensityLabel;
     private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel10;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
@@ -345,6 +441,7 @@ public class TransferFunction2DEditor extends javax.swing.JPanel {
     private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLabel7;
     private javax.swing.JLabel jLabel8;
+    private javax.swing.JLabel jLabel9;
     private javax.swing.JLabel labelGradMax;
     private javax.swing.JLabel labelGradMin;
     private javax.swing.JLabel labelMaxVal;
@@ -352,5 +449,6 @@ public class TransferFunction2DEditor extends javax.swing.JPanel {
     private javax.swing.JTextField opacityLabel;
     private javax.swing.JPanel plotPanel;
     private javax.swing.JTextField radiusLabel;
+    private javax.swing.JTextField specularTextbox;
     // End of variables declaration//GEN-END:variables
 }

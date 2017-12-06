@@ -306,9 +306,9 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             if (diffProduct > 0.0) {
                 double specProduct = VectorMath.dotproduct(N, V);   //H = L+V/|L+V| = V, because V = viewVec which is already normalized.
                 if (specProduct > 0.0) {
-                    color_v.r = tfEditor2D.ambientColor.r * k_ambient + tfEditor2D.triangleWidget.color.r * k_diff * diffProduct + k_spec * Math.pow(specProduct, phong_alpha);
-                    color_v.g = tfEditor2D.ambientColor.g * k_ambient + tfEditor2D.triangleWidget.color.g * k_diff * diffProduct + k_spec * Math.pow(specProduct, phong_alpha);
-                    color_v.b = tfEditor2D.ambientColor.b * k_ambient + tfEditor2D.triangleWidget.color.b * k_diff * diffProduct + k_spec * Math.pow(specProduct, phong_alpha);
+                    color_v.r = tfEditor2D.ambientColor.r * tfEditor2D.k_ambient + tfEditor2D.triangleWidget.color.r * tfEditor2D.k_diff * diffProduct + tfEditor2D.k_spec * Math.pow(specProduct, tfEditor2D.phong_alpha);
+                    color_v.g = tfEditor2D.ambientColor.g * tfEditor2D.k_ambient + tfEditor2D.triangleWidget.color.g * tfEditor2D.k_diff * diffProduct + tfEditor2D.k_spec * Math.pow(specProduct, tfEditor2D.phong_alpha);
+                    color_v.b = tfEditor2D.ambientColor.b * tfEditor2D.k_ambient + tfEditor2D.triangleWidget.color.b * tfEditor2D.k_diff * diffProduct + tfEditor2D.k_spec * Math.pow(specProduct, tfEditor2D.phong_alpha);
                 }
             }
         } 
@@ -323,10 +323,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     private int compositingStep = 1;
     private RaycastRenderType type = RaycastRenderType.SLICER;
     private boolean volumeShading = false;
-    private double k_ambient = 0.1;
-    private double k_diff = 0.7;
-    private double k_spec = 0.2;
-    private int phong_alpha = 10;
     
     public void setRenderType(RaycastRenderType type) {
         this.type = type;
@@ -362,8 +358,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         
         // uncomment this to initialize the TF with good starting values for the orange dataset 
         tFunc.setTestFunc();
-        
-        
+                
         tFunc.addTFChangeListener(this);
         tfEditor = new TransferFunctionEditor(tFunc, volume.getHistogram());
         
