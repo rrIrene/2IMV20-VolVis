@@ -287,10 +287,12 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         double factor = 0;
         
         //Get the opacity value using Levoy's formula.
-        if (delta_fx == 0.0 && f_v == f_x) {
-            factor = 1;
-        } else if (delta_fx > 0.0 && f_x-(r*delta_fx) <= f_v && f_v <= f_x+(r*delta_fx) && withinRange) {
-            factor = 1 - Math.abs((f_v-f_x)/delta_fx) / r;
+        if (withinRange) {
+            if (delta_fx == 0.0 && f_v == f_x) {
+                factor = 1;
+            } else if (delta_fx > 0.0 && f_x-(r*delta_fx) <= f_v && f_v <= f_x+(r*delta_fx)) {
+                factor = 1 - Math.abs((f_v-f_x)/delta_fx) / r;
+            }
         }
         
         TFColor color_v = new TFColor();
