@@ -24,8 +24,8 @@ public class TransferFunction2DView extends javax.swing.JPanel {
 
     TransferFunction2DEditor ed;
     private final int DOTSIZE = 8;
-    public Ellipse2D.Double baseControlPoint, radiusControlPoint;
-    boolean selectedBaseControlPoint, selectedRadiusControlPoint;
+    public Ellipse2D.Double baseControlPoint, radiusControlPoint, range1ControlPoint, range2ControlPoint;
+    boolean selectedBaseControlPoint, selectedRadiusControlPoint, selectedRange1ControlPoint, selectedRange2ControlPoint;
     private double maxHistoMagnitude;
     
     /**
@@ -38,6 +38,8 @@ public class TransferFunction2DView extends javax.swing.JPanel {
         this.ed = ed;
         selectedBaseControlPoint = false;
         selectedRadiusControlPoint = false;
+        selectedRange1ControlPoint = false;
+        selectedRange2ControlPoint = false;
         addMouseMotionListener(new TriangleWidgetHandler());
         addMouseListener(new SelectionHandler());
     }
@@ -80,6 +82,14 @@ public class TransferFunction2DView extends javax.swing.JPanel {
         g2.drawLine(xpos, ypos, xpos + (int) (ed.triangleWidget.radius * binWidth * ed.maxGradientMagnitude), 0);
         radiusControlPoint = new Ellipse2D.Double(xpos + (ed.triangleWidget.radius * binWidth * ed.maxGradientMagnitude) - DOTSIZE / 2,  0, DOTSIZE, DOTSIZE);
         g2.fill(radiusControlPoint);
+        //Draw the range points with the selected color
+        g2.setColor(new Color((int) (ed.triangleWidget.color.r * 255), (int) (ed.triangleWidget.color.g * 255), (int) (ed.triangleWidget.color.b * 255)));
+        range1ControlPoint = new Ellipse2D.Double(xpos - DOTSIZE / 2, ypos - (ed.triangleWidget.range1 / ed.maxGradientMagnitude * ypos) - DOTSIZE, DOTSIZE, DOTSIZE);
+        g2.fill(range1ControlPoint);
+        range2ControlPoint = new Ellipse2D.Double(xpos - DOTSIZE / 2, ypos - (ed.triangleWidget.range2 / ed.maxGradientMagnitude * ypos), DOTSIZE, DOTSIZE);
+        g2.fill(range2ControlPoint);
+        //Draw line between range points
+        g2.drawLine((int)range1ControlPoint.x + DOTSIZE / 2, (int)range1ControlPoint.y, (int)range2ControlPoint.x + DOTSIZE / 2, (int)range2ControlPoint.y);
     }
     
     
@@ -87,7 +97,7 @@ public class TransferFunction2DView extends javax.swing.JPanel {
 
         @Override
         public void mouseMoved(MouseEvent e) {
-            if (baseControlPoint.contains(e.getPoint()) || radiusControlPoint.contains(e.getPoint())) {
+            if (baseControlPoint.contains(e.getPoint()) || radiusControlPoint.contains(e.getPoint()) || range1ControlPoint.contains(e.getPoint()) || range2ControlPoint.contains(e.getPoint())) {
                 setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             } else {
                 setCursor(Cursor.getDefaultCursor());
@@ -96,7 +106,7 @@ public class TransferFunction2DView extends javax.swing.JPanel {
         
         @Override
         public void mouseDragged(MouseEvent e) {
-            if (selectedBaseControlPoint || selectedRadiusControlPoint) {
+            if (selectedBaseControlPoint || selectedRadiusControlPoint || selectedRange1ControlPoint || selectedRange2ControlPoint) {
                 Point dragEnd = e.getPoint();
                 
                 if (selectedBaseControlPoint) {
@@ -107,6 +117,14 @@ public class TransferFunction2DView extends javax.swing.JPanel {
                     dragEnd.setLocation(dragEnd.x, radiusControlPoint.getCenterY());
                     if (dragEnd.x - baseControlPoint.getCenterX() <= 0) {
                         dragEnd.x = (int) (baseControlPoint.getCenterX() + 1);
+                    }
+                } else if (selectedRange1ControlPoint || selectedRange2ControlPoint) {
+                    // avoid going past the base control and 0 magnitude
+                    if (dragEnd.y < 0) {
+                        dragEnd.y = 0;
+                    }
+                    if (dragEnd.y >= getHeight()) {
+                        dragEnd.y = getHeight() - 1;
                     }
                 }
                 if (dragEnd.x < 0) {
@@ -122,6 +140,10 @@ public class TransferFunction2DView extends javax.swing.JPanel {
                     ed.triangleWidget.baseIntensity = (short) (dragEnd.x / binWidth);
                 } else if (selectedRadiusControlPoint) {
                     ed.triangleWidget.radius = (dragEnd.x - (ed.triangleWidget.baseIntensity * binWidth))/(binWidth*ed.maxGradientMagnitude);
+                } else if (selectedRange1ControlPoint) {
+                    ed.triangleWidget.range1 = (h - dragEnd.y) / h * ed.maxGradientMagnitude;
+                } else if (selectedRange2ControlPoint) {
+                    ed.triangleWidget.range2 = (h - dragEnd.y) / h * ed.maxGradientMagnitude;                  
                 }
                 ed.setSelectedInfo();
                 
@@ -135,13 +157,19 @@ public class TransferFunction2DView extends javax.swing.JPanel {
     private class SelectionHandler extends MouseAdapter {
         @Override
         public void mousePressed(MouseEvent e) {
-            if (baseControlPoint.contains(e.getPoint())) {
+            if (range1ControlPoint.contains(e.getPoint())) {
+                selectedRange1ControlPoint = true;
+            } else if (range2ControlPoint.contains(e.getPoint())) {
+                selectedRange2ControlPoint = true;
+            } else if (baseControlPoint.contains(e.getPoint())) {
                 selectedBaseControlPoint = true;
             } else if (radiusControlPoint.contains(e.getPoint())) {
                 selectedRadiusControlPoint = true;
             } else {
                 selectedRadiusControlPoint = false;
                 selectedBaseControlPoint = false;
+                selectedRange1ControlPoint = false;
+                selectedRange2ControlPoint = false;
             }
         }
         
@@ -149,6 +177,8 @@ public class TransferFunction2DView extends javax.swing.JPanel {
         public void mouseReleased(MouseEvent e) {
             selectedRadiusControlPoint = false;
             selectedBaseControlPoint = false;
+            selectedRange1ControlPoint = false;
+            selectedRange2ControlPoint = false;
             ed.changed();
             repaint();
         }
